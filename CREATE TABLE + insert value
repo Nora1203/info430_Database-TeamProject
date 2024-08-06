@@ -1,0 +1,1002 @@
+USE team7_Project4;
+GO
+
+
+DROP TABLE IF EXISTS tblCustomerCampaign;
+DROP TABLE IF EXISTS tblStaffSchedule;
+DROP TABLE IF EXISTS tblReview;
+DROP TABLE IF EXISTS tblProductOrder;
+DROP TABLE IF EXISTS tblSupplierContact;
+DROP TABLE IF EXISTS tblOrder;
+DROP TABLE IF EXISTS tblMembership;
+DROP TABLE IF EXISTS tblProduct;
+DROP TABLE IF EXISTS tblStaff;
+DROP TABLE IF EXISTS tblSchedule;
+DROP TABLE IF EXISTS tblCustomer;
+DROP TABLE IF EXISTS tblWarehouse;
+DROP TABLE IF EXISTS tblSupplier;
+DROP TABLE IF EXISTS tblContact;
+DROP TABLE IF EXISTS tblCampaign;
+DROP TABLE IF EXISTS tblPriority;
+DROP TABLE IF EXISTS tblState;
+DROP TABLE IF EXISTS tblCountry;
+DROP TABLE IF EXISTS tblRegion;
+DROP TABLE IF EXISTS tblWarehouseType;
+DROP TABLE IF EXISTS tblPriorityType;
+DROP TABLE IF EXISTS tblCampaignType;
+DROP TABLE IF EXISTS tblMembershipType;
+DROP TABLE IF EXISTS tblSupplierType;
+DROP TABLE IF EXISTS tblRole;
+DROP TABLE IF EXISTS tblContactType;
+DROP TABLE IF EXISTS tblDay;
+DROP TABLE IF EXISTS tblPosition;
+DROP TABLE IF EXISTS tblProductType;
+DROP TABLE IF EXISTS tblPaymentType;
+DROP TABLE IF EXISTS tblRating;
+DROP TABLE IF EXISTS tblGender;
+
+
+--01-Region--------------------------------------------------------------------
+
+
+CREATE TABLE tblRegion (
+  RegionID INT IDENTITY(1,1) PRIMARY KEY,
+  RegionName VARCHAR(255) NOT NULL UNIQUE,
+  RegionDescr VARCHAR(255)
+);
+
+
+INSERT INTO tblRegion (RegionName, RegionDescr)
+VALUES
+  ('North America', 'the third-largest continent'),
+  ('Asia', 'the largest and most populous continent'),
+  ('Africa', 'the second-largest continent'),
+  ('South America', 'continent entirely in the Western Hemisphere'),
+  ('Europe', 'located entirely in the Northern Hemisphere'),
+  ('Antarctica', 'Costco probably wont sell stuff here'),
+  ('Australia', 'The smallest continent');
+
+
+--02-Country-------------------------------------------------------------------
+
+
+CREATE TABLE tblCountry (
+  CountryID INT IDENTITY(1,1) PRIMARY KEY,
+  RegionID INT NOT NULL,
+  CountryName VARCHAR(255) NOT NULL UNIQUE,
+  CountryDescr VARCHAR(255),
+  FOREIGN KEY (RegionID) REFERENCES tblRegion(RegionID)
+);
+
+
+INSERT INTO tblCountry (CountryName, CountryDescr, RegionID)
+VALUES
+  ('United States', 'A country in North America', (SELECT RegionID FROM tblRegion WHERE RegionName = 'North America')),
+  ('China', 'A country in Asia', (SELECT RegionID FROM tblRegion WHERE RegionName = 'Asia')),
+  ('United Kingdom', 'A country in Europe', (SELECT RegionID FROM tblRegion WHERE RegionName = 'Europe')),
+  ('Australia', 'A country in Australia', (SELECT RegionID FROM tblRegion WHERE RegionName = 'Australia'));
+
+
+--03-State---------------------------------------------------------------------
+
+
+CREATE TABLE tblState (
+  StateID INT IDENTITY(1,1) PRIMARY KEY,
+  CountryID INT NOT NULL,
+  StateName VARCHAR(255) NOT NULL,
+  StateDescr VARCHAR(255),
+  FOREIGN KEY (CountryID) REFERENCES tblCountry(CountryID)
+);
+
+
+INSERT INTO tblState (StateName, StateDescr, CountryID)
+VALUES
+  ('Washington', 'A state in the west coast', (SELECT CountryID FROM tblCountry WHERE CountryName = 'United States')),
+  ('New Jersey', 'A state in the east coast', (SELECT CountryID FROM tblCountry WHERE CountryName = 'United States')),
+  ('New York', 'A state in the east coast', (SELECT CountryID FROM tblCountry WHERE CountryName = 'United States'));
+
+
+--04-Gender--------------------------------------------------------------------
+
+
+CREATE TABLE tblGender (
+GenderID INT PRIMARY KEY,
+GenderName VARCHAR(50) NOT NULL UNIQUE
+);
+INSERT INTO tblGender (GenderID, GenderName)
+VALUES
+  (1, 'Male'),
+  (2, 'Female'),
+  (3, 'Other');
+
+
+--05-ContactType---------------------------------------------------------------
+
+
+CREATE TABLE tblContactType(
+  ContactTypeID INT IDENTITY(1, 1) PRIMARY KEY,
+  ContactTypeName VARCHAR(100) NOT NULL UNIQUE,
+  ContactTypeDescr VARCHAR(225) NOT NULL
+);
+
+
+INSERT INTO tblContactType (ContactTypeName, ContactTypeDescr)
+VALUES
+  ('Ordering', 'The contact responsible for ordering'),
+  ('Returning', 'The contact responsible for returning'),
+  ('Compliance', 'The contact responsible for compliance'),
+  ('Logistics', 'The contact responsible for logistics');
+
+
+--06-Role----------------------------------------------------------------------
+
+
+CREATE TABLE tblRole(
+  RoleID INT IDENTITY(1, 1) PRIMARY KEY,
+  RoleName VARCHAR(100) NOT NULL UNIQUE,
+  RoleDescr VARCHAR(225) NOT NULL
+);
+
+
+INSERT INTO tblRole (RoleName, RoleDescr)
+VALUES
+  ('CEO', 'Runs whole company'),
+  ('Manager', 'Manages operations'),
+  ('Employee', 'General employee'),
+  ('Intern', 'Supervised');
+
+
+--07-SupplierType--------------------------------------------------------------
+
+
+CREATE TABLE tblSupplierType(
+  SupplierTypeID INT IDENTITY(1, 1) PRIMARY KEY,
+  SupplierTypeName VARCHAR(100) NOT NULL UNIQUE,
+  SupplierTypeDescr VARCHAR(225) NOT NULL
+);
+
+
+INSERT INTO tblSupplierType (SupplierTypeName, SupplierTypeDescr)
+VALUES
+  ('Local', 'Local supplier'),
+  ('Regional', 'Regional supplier'),
+  ('International', 'International supplier');
+
+
+--8-PriorityType---------------------------------------------------------------
+
+
+CREATE TABLE tblPriorityType (
+  PriorityTypeID INT IDENTITY(1, 1) PRIMARY KEY,
+  PriorityTypeName VARCHAR(255) NOT NULL UNIQUE,
+  PriorityTypeDescr VARCHAR(255)
+);
+
+
+INSERT INTO tblPriorityType (PriorityTypeName, PriorityTypeDescr)
+VALUES
+  ('High', 'High Priority'),
+  ('Medium', 'Medium Priority'),
+  ('Low', 'Low Priority');
+
+
+--9-CampaignType---------------------------------------------------------------
+
+
+CREATE TABLE tblCampaignType (
+  CampaignTypeID INT IDENTITY(1, 1) PRIMARY KEY,
+  CampaignTypeName VARCHAR(255) NOT NULL UNIQUE,
+  CampaignTypeDescr VARCHAR(255)
+);
+
+
+INSERT INTO tblCampaignType (CampaignTypeName, CampaignTypeDescr)
+VALUES
+  ('Email Marketing', 'Email marketing campaign'),
+  ('Social Media', 'Social Media campaign'),
+  ('Public Relations', 'Public Relations campaign'),
+  ('Flyer', 'Flyer campaign');
+
+
+--10-MembershipType------------------------------------------------------------
+
+
+CREATE TABLE tblMembershipType (
+  MembershipTypeID INT IDENTITY(1, 1) PRIMARY KEY,
+  MembershipTypeName VARCHAR(255) NOT NULL UNIQUE,
+  MembershipTypeDescr VARCHAR(255)
+);
+
+
+INSERT INTO tblMembershipType (MembershipTypeName, MembershipTypeDescr)
+VALUES
+  ('Standard', 'Standard membership'),
+  ('Executive', 'Premium membership'),
+  ('Business', 'Business membership');
+
+
+--11-WarehouseType-------------------------------------------------------------
+
+
+CREATE TABLE tblWarehouseType (
+  WarehouseTypeID INT IDENTITY(1,1) PRIMARY KEY,
+  WarehouseTypeName VARCHAR(100) NOT NULL UNIQUE,
+  WarehouseDescr VARCHAR(255) NOT NULL
+);
+
+
+INSERT INTO tblWarehouseType (WarehouseTypeName, WarehouseDescr)
+VALUES
+  ('Distribution Center', 'Central hub for distribution'),
+  ('Bulk Storage', 'Bulk storage warehouses'),
+  ('Return Processing Center', 'Return processing centers'),
+  ('Retail', 'Retail outlet storage');
+
+
+--12-Day-----------------------------------------------------------------------
+
+
+CREATE TABLE tblDay (
+  DayID INT IDENTITY(1,1) PRIMARY KEY,
+  DayName VARCHAR(255) NOT NULL UNIQUE
+);
+
+
+INSERT INTO tblDay (DayName)
+VALUES
+  ('Monday'),
+  ('Tuesday'),
+  ('Wednesday'),
+  ('Thursday'),
+  ('Friday'),
+  ('Saturday'),
+  ('Sunday');
+
+
+--13-Position------------------------------------------------------------------
+
+
+CREATE TABLE tblPosition (
+  PositionID INT IDENTITY(1,1) PRIMARY KEY,
+  PositionName VARCHAR(100) NOT NULL UNIQUE,
+  PositionDescr VARCHAR(255) NOT NULL
+);
+
+
+INSERT INTO tblPosition (PositionName, PositionDescr)
+VALUES
+  ('Warehouse Manager', 'Manages the warehouse operations'),
+  ('Sales Associate', 'Handles sales interactions'),
+  ('Cashier', 'Manage customer check out'),
+  ('Deli Service Worker', 'Prepares and serves food items'),
+  ('Maintenance Technician', 'Maintains facility'),
+  ('Forklift Operator', 'Move and organize large items'),
+  ('Security', 'Ensures warehouse safety');
+
+
+--14-Warehouse-----------------------------------------------------------------
+
+
+CREATE TABLE tblWarehouse (
+  WarehouseID INT IDENTITY(1,1) PRIMARY KEY,
+  WarehouseTypeID INT,
+  StateID INT,
+  WarehouseName VARCHAR(100) NOT NULL,
+  WarehouseAddress VARCHAR(255) NOT NULL,
+  WarehouseCity VARCHAR(100) NOT NULL,
+  WarehouseZip VARCHAR(100) NOT NULL,
+  OpeningDate DATE NOT NULL,
+  WarehousePhone VARCHAR(20) NOT NULL,
+  FOREIGN KEY (WarehouseTypeID) REFERENCES tblWarehouseType(WarehouseTypeID),
+  FOREIGN KEY (StateID) REFERENCES tblState(StateID)
+);
+
+
+INSERT INTO tblWarehouse (WarehouseTypeID, StateID, WarehouseName, WarehouseAddress, WarehouseCity, WarehouseZip, OpeningDate, WarehousePhone)
+SELECT
+(SELECT WarehouseTypeID FROM tblWarehouseType WHERE WarehouseTypeName = 'Distribution Center'),
+(SELECT StateID FROM tblState WHERE StateName = 'Washington'),
+'Distribution Center', '1132 Central Blvd S', 'Tukwila', '98031', '2013-01-01', '206-923-7643';
+
+
+INSERT INTO tblWarehouse (WarehouseTypeID, StateID, WarehouseName, WarehouseAddress, WarehouseCity, WarehouseZip, OpeningDate, WarehousePhone)
+SELECT
+(SELECT WarehouseTypeID FROM tblWarehouseType WHERE WarehouseTypeName = 'Retail'),
+(SELECT StateID FROM tblState WHERE StateName = 'Washington'),
+'Retail', '4401 4th Ave S', 'Seattle', '98134', '2009-02-15', '206-623-3136';
+
+
+INSERT INTO tblWarehouse (WarehouseTypeID, StateID, WarehouseName, WarehouseAddress, WarehouseCity, WarehouseZip, OpeningDate, WarehousePhone)
+SELECT
+(SELECT WarehouseTypeID FROM tblWarehouseType WHERE WarehouseTypeName = 'Bulk Storage'),
+(SELECT StateID FROM tblState WHERE StateName = 'New Jersey'),
+'Bulk Storage Facility', '500 Storage Way', 'Toms River', '08753', '2015-05-15', '509-555-1234';
+
+
+INSERT INTO tblWarehouse (WarehouseTypeID, StateID, WarehouseName, WarehouseAddress, WarehouseCity, WarehouseZip, OpeningDate, WarehousePhone)
+SELECT
+(SELECT WarehouseTypeID FROM tblWarehouseType WHERE WarehouseTypeName = 'Return Processing Center'),
+(SELECT StateID FROM tblState WHERE StateName = 'New York'),
+'Return Processing Hub', '750 Return Road', 'Manhattan', '10022', '2017-08-01', '253-555-5678';
+
+
+--15-Supplier------------------------------------------------------------------
+
+
+CREATE TABLE tblSupplier(
+  SupplierID INT IDENTITY(1, 1) PRIMARY KEY,
+  SupplierTypeID INT,
+  SupplierName VARCHAR(100) NOT NULL,
+  FOREIGN KEY (SupplierTypeID) REFERENCES tblSupplierType (SupplierTypeID)
+);
+
+
+INSERT INTO tblSupplier (SupplierName, SupplierTypeID)
+VALUES
+  ('Nike', (SELECT SupplierTypeID FROM tblSupplierType WHERE SupplierTypeName = 'Local')),
+  ('Wahaha', (SELECT SupplierTypeID FROM tblSupplierType WHERE SupplierTypeName = 'International')),
+  ('California Orange', (SELECT SupplierTypeID FROM tblSupplierType WHERE SupplierTypeName = 'Regional')),
+  ('SONY', (SELECT SupplierTypeID FROM tblSupplierType WHERE SupplierTypeName = 'International')),
+ ('Taylor Farms', (SELECT SupplierTypeID FROM tblSupplierType WHERE SupplierTypeName = 'Regional')),
+ ('Apple', (SELECT SupplierTypeID FROM tblSupplierType WHERE SupplierTypeName = 'Regional')),
+ ('Kirkland', (SELECT SupplierTypeID FROM tblSupplierType WHERE SupplierTypeName = 'Local'));
+
+
+--16-Contact-------------------------------------------------------------------
+
+
+CREATE TABLE tblContact(
+  ContactID INT IDENTITY(1, 1) PRIMARY KEY,
+  ContactTypeID INT,
+  RoleID INT,
+  ContactFName VARCHAR(100) NOT NULL,
+  ContactLName VARCHAR(100) NOT NULL,
+  ContactPhone VARCHAR(100) NOT NULL,
+  ContactEmail VARCHAR(100) NOT NULL,
+  FOREIGN KEY (ContactTypeID) REFERENCES tblContactType (ContactTypeID),
+  FOREIGN KEY (RoleID) REFERENCES tblRole (RoleID)
+);
+
+
+INSERT INTO tblContact (ContactFName, ContactLName, ContactPhone, ContactEmail, ContactTypeID, RoleID)
+SELECT 'Elizabeth', 'Woodlner', '253-123-467', 'eliwood@gmail.com', CT.ContactTypeID, RO.RoleID
+FROM (SELECT ContactTypeID FROM tblContactType WHERE ContactTypeName = 'Compliance') CT,
+  (SELECT RoleID FROM tblRole WHERE RoleName = 'Manager') RO
+UNION ALL
+SELECT 'Jame', 'Zhang', '292-233-427', 'jamesz@gmail.com', CT.ContactTypeID, RO.RoleID
+FROM (SELECT ContactTypeID FROM tblContactType WHERE ContactTypeName = 'Logistics') CT,
+  (SELECT RoleID FROM tblRole WHERE RoleName = 'Employee') RO
+UNION ALL
+SELECT 'Axel', 'Zhao', '215-403-5087', 'axelz@gmail.com', CT.ContactTypeID, RO.RoleID
+FROM (SELECT ContactTypeID FROM tblContactType WHERE ContactTypeName = 'Returning') CT,
+  (SELECT RoleID FROM tblRole WHERE RoleName = 'Intern') RO
+UNION ALL
+SELECT 'Doryi', 'Wang', '111-222-333', 'doryiw@gmail.com', CT.ContactTypeID, RO.RoleID
+FROM (SELECT ContactTypeID FROM tblContactType WHERE ContactTypeName = 'Ordering') CT,
+  (SELECT RoleID FROM tblRole WHERE RoleName = 'CEO') RO;
+
+
+--17-Rating--------------------------------------------------------------------
+
+
+CREATE TABLE tblRating(
+  RatingID INT IDENTITY(1, 1) PRIMARY KEY,
+  RateScore INT NOT NULL UNIQUE,
+  RateName VARCHAR(100) NOT NULL,
+  RateDescr VARCHAR(225) NOT NULL
+);
+
+
+INSERT INTO tblRating (RateScore, RateName, RateDescr)
+VALUES
+  ('5', 'Excellent', 'Exceeds'),
+  ('4', 'Great', 'Beyond expections'),
+  ('3', 'Good', 'Meets expectations'),
+  ('2', 'Ambivalent', 'Has pros and cons'),
+  ('1', 'Poor', 'Falls below expectations');
+
+
+--18-PaymentType---------------------------------------------------------------
+
+
+CREATE TABLE tblPaymentType(
+  PaymentTypeID INT IDENTITY(1, 1) PRIMARY KEY,
+  PaymentTypetName VARCHAR(100) NOT NULL UNIQUE
+);
+
+
+INSERT INTO tblPaymentType (PaymentTypetName)
+VALUES
+  ('Credit Card'),
+  ('Debit Card'),
+  ('Cash');
+ 
+--19-ProductType---------------------------------------------------------------
+
+
+CREATE TABLE tblProductType(
+  ProductTypeID INT IDENTITY(1, 1) PRIMARY KEY,
+  ProductTypeName VARCHAR(100) NOT NULL UNIQUE,
+  ProductTypetDescr VARCHAR(225) NOT NULL
+);
+
+
+INSERT INTO tblProductType (ProductTypeName, ProductTypetDescr)
+VALUES
+  ('Electronics', 'Electronic devices'),
+  ('Apparel', 'Clothing and accessories'),
+  ('Meat', 'Protein'),
+  ('Video Games', 'Play'),
+  ('Toy', 'Play it'),
+  ('Fruit and Vegetables', 'Grocery'),
+  ('Drinks', 'Grocery');
+
+
+--20-Customer------------------------------------------------------------------
+
+
+CREATE TABLE tblCustomer (
+  CustomerID INT IDENTITY(1, 1) PRIMARY KEY,
+  StateID INT,
+  GenderID INT,
+  CustomerFName VARCHAR(255) NOT NULL,
+  CustomerLName VARCHAR(255) NOT NULL,
+  CustomerEmail VARCHAR(255) NOT NULL,
+  CustomerPhone VARCHAR(20) NOT NULL,
+  CustomerCity VARCHAR(255) NOT NULL,
+  CustomerAddress VARCHAR(255) NOT NULL,
+  CustomerZip VARCHAR(10) NOT NULL,
+  DOB DATE,
+  FOREIGN KEY (StateID) REFERENCES tblState(StateID),fo
+  FOREIGN KEY (GenderID) REFERENCES tblGender(GenderID)
+);
+
+
+INSERT INTO tblCustomer (StateID, GenderID, CustomerFName, CustomerLName, CustomerEmail, CustomerPhone, CustomerCity, CustomerAddress, CustomerZip, DOB)
+SELECT
+(SELECT StateID FROM tblState WHERE StateName = 'Washington'),
+(SELECT GenderID FROM tblGender WHERE GenderName = 'Male'),
+'John', 'Doe', 'johndoe@gmail.com', '253-986-2931', 'Bellevue', '1234 Main Street', '98005', '1985-01-01';
+
+
+INSERT INTO tblCustomer (StateID, GenderID, CustomerFName, CustomerLName, CustomerEmail, CustomerPhone, CustomerCity, CustomerAddress, CustomerZip, DOB)
+SELECT
+(SELECT StateID FROM tblState WHERE StateName = 'California'),
+(SELECT GenderID FROM tblGender WHERE GenderName = 'Female'),
+'Jane', 'Smith', 'janesmith@gmail.com', '800-555-5678', 'Los Angeles', '5678 Oak Avenue', '90001', '1990-02-02';
+
+
+INSERT INTO tblCustomer (StateID, GenderID, CustomerFName, CustomerLName, CustomerEmail, CustomerPhone, CustomerCity, CustomerAddress, CustomerZip, DOB)
+SELECT
+(SELECT StateID FROM tblState WHERE StateName = 'New York'),
+(SELECT GenderID FROM tblGender WHERE GenderName = 'Female'),
+'Vanessa', 'Wong', 'vanessawong@gmail.com', '212-525-5638', 'New York', '5678 21TH AVE NE', '10008', '2000-02-09';
+
+
+INSERT INTO tblCustomer (StateID, GenderID, CustomerFName, CustomerLName, CustomerEmail, CustomerPhone, CustomerCity, CustomerAddress, CustomerZip, DOB)
+SELECT
+(SELECT StateID FROM tblState WHERE StateName = 'New Jersey'),
+(SELECT GenderID FROM tblGender WHERE GenderName = 'Male'),
+'Noah', 'Liu', 'noahl@gmail.com', '214-666-5638', 'New Jersey', '647 Clifton AVE', '08753', '2002-10-11';
+
+
+--21-Membership----------------------------------------------------------------
+
+
+CREATE TABLE tblMembership (
+  MembershipID INT IDENTITY(1, 1) PRIMARY KEY,
+  MembershipTypeID INT,
+  CustomerID INT,
+  StartDate DATE NOT NULL,
+  ExpirationDate DATE NOT NULL,
+  RenewalDate DATE NOT NULL,
+  FOREIGN KEY (MembershipTypeID) REFERENCES tblMembershipType(MembershipTypeID),
+  FOREIGN KEY (CustomerID) REFERENCES tblCustomer(CustomerID)
+);
+
+
+INSERT INTO tblMembership (CustomerID, MembershipTypeID, StartDate, ExpirationDate, RenewalDate)
+SELECT
+(SELECT CustomerID FROM tblCustomer WHERE CustomerEmail = 'johndoe@gmail.com'),
+(SELECT MembershipTypeID FROM tblMembershipType WHERE MembershipTypeName = 'Business'),
+'10-03-2012', '10-03-2024', '9-03-2024';
+
+
+INSERT INTO tblMembership (CustomerID, MembershipTypeID, StartDate, ExpirationDate, RenewalDate)
+SELECT
+(SELECT CustomerID FROM tblCustomer WHERE CustomerEmail = 'janesmith@gmail.com'),
+(SELECT MembershipTypeID FROM tblMembershipType WHERE MembershipTypeName = 'Standard'),
+'03-04-2016', '03-04-2024', '2-04-2024';
+
+
+INSERT INTO tblMembership (CustomerID, MembershipTypeID, StartDate, ExpirationDate, RenewalDate)
+SELECT
+(SELECT CustomerID FROM tblCustomer WHERE CustomerEmail = 'vanessawong@gmail.com'),
+(SELECT MembershipTypeID FROM tblMembershipType WHERE MembershipTypeName = 'Executive'),
+'12-04-2019', '12-04-2024', '11-04-2024';
+
+
+INSERT INTO tblMembership (CustomerID, MembershipTypeID, StartDate, ExpirationDate, RenewalDate)
+SELECT
+(SELECT CustomerID FROM tblCustomer WHERE CustomerEmail = 'noahl@gmail.com'),
+(SELECT MembershipTypeID FROM tblMembershipType WHERE MembershipTypeName = 'Executive'),
+'10-22-2019', '12-18-2024', '11-04-2024';
+
+
+--22-Priority------------------------------------------------------------------
+
+
+CREATE TABLE tblPriority (
+  PriorityID INT IDENTITY(1, 1) PRIMARY KEY,
+  PriorityTypeID INT,
+  PriorityName VARCHAR(255) NOT NULL,
+  FOREIGN KEY (PriorityTypeID) REFERENCES tblPriorityType(PriorityTypeID)
+);
+
+
+INSERT INTO tblPriority (PriorityName, PriorityTypeID)
+VALUES ('Immediate', (SELECT PriorityTypeID FROM tblPriorityType WHERE PriorityTypeName = 'High'));
+INSERT INTO tblPriority (PriorityName, PriorityTypeID)
+VALUES ('Deffered', (SELECT PriorityTypeID FROM tblPriorityType WHERE PriorityTypeName = 'Medium'));
+INSERT INTO tblPriority (PriorityName, PriorityTypeID)
+VALUES ('Planned', (SELECT PriorityTypeID FROM tblPriorityType WHERE PriorityTypeName = 'Low'));
+
+
+--23-Campaign------------------------------------------------------------------
+
+
+CREATE TABLE tblCampaign (
+ CampaignID INT IDENTITY(1, 1) PRIMARY KEY,
+ CampaignTypeID INT,
+ PriorityID INT,
+ Goal VARCHAR(255),
+ CampaignStartDate DATE,
+ CampaignEndDate DATE,
+ Expense DECIMAL(10, 2),
+ FOREIGN KEY (CampaignTypeID) REFERENCES tblCampaignType(CampaignTypeID),
+ FOREIGN KEY (PriorityID) REFERENCES tblPriority(PriorityID)
+);
+
+
+INSERT INTO tblCampaign (CampaignTypeID, PriorityID, Goal, CampaignStartDate, CampaignEndDate, Expense)
+SELECT
+ (SELECT CampaignTypeID FROM tblCampaignType WHERE CampaignTypeName = 'Email Marketing'),
+ (SELECT PriorityID FROM tblPriority WHERE PriorityName = 'Urgent'),
+ '2% increase in membership subscription', '03-02-2023', '04-02-2023', 2000.00;
+
+
+INSERT INTO tblCampaign (CampaignTypeID, PriorityID, Goal, CampaignStartDate, CampaignEndDate, Expense)
+SELECT
+ (SELECT CampaignTypeID FROM tblCampaignType WHERE CampaignTypeName = 'Flyer'),
+ (SELECT PriorityID FROM tblPriority WHERE PriorityName = 'Planned'),
+ '5% increase in sales', '06-01-2020', '07-01-2020', 5000.00;
+
+
+--24-Product-------------------------------------------------------------------
+
+
+CREATE TABLE tblProduct(
+  ProductID INT IDENTITY(1, 1) PRIMARY KEY,
+  SupplierID INT,
+  ProductTypeID INT,
+  ProductName VARCHAR(100) NOT NULL,
+  Cost DECIMAL(10, 2) NOT NULL,
+  Price DECIMAL(10, 2) NOT NULL,
+  FOREIGN KEY (SupplierID) REFERENCES tblSupplier (SupplierID),
+  FOREIGN KEY (ProductTypeID) REFERENCES tblProductType (ProductTypeID)
+);
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'SONY'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Video Games'),
+'Call Of Duty', 15.00, 19.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Nike'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Apparel'),
+'Airforce 1', 170.00, 199.00;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Taylor Farms'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Fruit and Vegetables'),
+'Organic Spring Salad', 5.00, 6.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Wahaha'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Drinks'),
+'Vitamin A&D Calcium Milk Drink', 2.00, 4.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT TOP 1 SupplierID FROM tblSupplier WHERE SupplierName = 'Kirkland' ORDER BY SupplierID),
+(SELECT TOP 1 ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Apparel' ORDER BY ProductTypeID),
+'Costco Logo Sweatshirt', 15.00, 21.50;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Apple'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Electronics'),
+'Macbook Air 2024 521G', 1299.00, 1359.00;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+  (SELECT TOP 1 SupplierID FROM tblSupplier WHERE SupplierName = 'SONY' ORDER BY SupplierID), -- Assuming SupplierID is a suitable column for ordering
+  (SELECT TOP 1 ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Video Games' ORDER BY ProductTypeID),
+  'God of War Ragnarok', 50.00, 69.00;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Nike'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Apparel'),
+'Jordan 1 Retro High Off-White University Blue', 150.00, 1580.00;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Nike'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Apparel'),
+'Nike Dunk Low', 80.00, 115.00;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Nike'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Apparel'),
+'Nike LeBron 9 Low', 90.00, 95.97;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Wahaha'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Drinks'),
+'Wahaha Mineal Water', 0.49, 0.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Wahaha'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Drinks'),
+'Lemon Juice Carbonated Drink', 0.79, 1.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'California Orange'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Fruit and Vegetables'),
+'A bag of oranges', 2.79, 4.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'SONY'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Video Games'),
+'Final Fantasy XV', 2.99, 14.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'SONY'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Video Games'),
+'Marvel Spider-Man 2 PS5', 12.99, 59.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'SONY'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Video Games'),
+'Until Dawn', 5.99, 19.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Taylor Farms'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Meat'),
+'Chicken & Bacon Salad', 2.99, 4.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Taylor Farms'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Fruit and Vegetables'),
+'Strawberry', 1.99, 6.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Apple'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Electronics'),
+'Apple Watch SE (2023)', 99.99, 189.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Apple'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Electronics'),
+'iPhone 15 Pro', 999.99, 1199.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Apple'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Electronics'),
+'Apple Vision Pro', 2999.99, 3499.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Apple'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Electronics'),
+'iPad Pro', 599.99, 799.99;
+
+
+INSERT INTO tblProduct (SupplierID, ProductTypeID, ProductName, Cost, Price)
+SELECT
+(SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Kirkland'),
+(SELECT ProductTypeID FROM tblProductType WHERE ProductTypeName = 'Apparel'),
+'Kirkland Signature Sweatshirt', 12.99, 34.99;
+
+
+
+
+--25-Order---------------------------------------------------------------------
+
+
+CREATE TABLE tblOrder(
+  OrderID INT IDENTITY(1, 1) PRIMARY KEY,
+  MembershipID INT,
+  WarehouseID INT,
+  PaymentTypeID INT,
+  OrderDate DATE NOT NULL,
+  TotalAmount DECIMAL(10, 2) NOT NULL,
+  FOREIGN KEY (MembershipID) REFERENCES tblMembership (MembershipID),
+  FOREIGN KEY (WarehouseID) REFERENCES tblWarehouse (WarehouseID),
+  FOREIGN KEY (PaymentTypeID) REFERENCES tblPaymentType (PaymentTypeID)
+);
+
+
+INSERT INTO tblOrder (MembershipID, WarehouseID, PaymentTypeID, OrderDate, TotalAmount)
+SELECT
+(SELECT MembershipID FROM tblMembership WHERE CustomerID = (SELECT CustomerID FROM tblCustomer WHERE CustomerEmail = 'johndoe@gmail.com')),
+(SELECT WarehouseID FROM tblWarehouse WHERE WarehouseName = 'Retail'),
+(SELECT PaymentTypeID FROM tblPaymentType WHERE PaymentTypetName = 'Credit Card'),
+'2022-03-15', 328.00;
+
+
+INSERT INTO tblOrder (MembershipID, WarehouseID, PaymentTypeID, OrderDate, TotalAmount)
+SELECT
+(SELECT MembershipID FROM tblMembership WHERE CustomerID = (SELECT CustomerID FROM tblCustomer WHERE CustomerEmail = 'janesmith@gmail.com')),
+(SELECT WarehouseID FROM tblWarehouse WHERE WarehouseName = 'Retail'),
+(SELECT PaymentTypeID FROM tblPaymentType WHERE PaymentTypetName = 'Credit Card'),
+'2020-02-15', 68.00;
+
+
+INSERT INTO tblOrder (MembershipID, WarehouseID, PaymentTypeID, OrderDate, TotalAmount)
+SELECT
+(SELECT MembershipID FROM tblMembership WHERE CustomerID = (SELECT CustomerID FROM tblCustomer WHERE CustomerEmail = 'vanessawong@gmail.com')),
+(SELECT WarehouseID FROM tblWarehouse WHERE WarehouseName = 'Retail'),
+(SELECT PaymentTypeID FROM tblPaymentType WHERE PaymentTypetName = 'Debit Card'),
+'2022-09-10', 768.00;
+
+
+INSERT INTO tblOrder (MembershipID, WarehouseID, PaymentTypeID, OrderDate, TotalAmount)
+SELECT
+(SELECT MembershipID FROM tblMembership WHERE CustomerID = (SELECT CustomerID FROM tblCustomer WHERE CustomerEmail = 'noahl@gmail.com')),
+(SELECT WarehouseID FROM tblWarehouse WHERE WarehouseName = 'Retail'),
+(SELECT PaymentTypeID FROM tblPaymentType WHERE PaymentTypetName = 'Cash'),
+'2022-09-10', 219.00;
+
+
+--26-ProductOrder--------------------------------------------------------------
+
+
+CREATE TABLE tblProductOrder(
+ ProductOrderID INT IDENTITY(1, 1) PRIMARY KEY,
+ OrderID INT,
+ ProductID INT,
+ Quantity INT NOT NULL,
+ Subtotal DECIMAL(10, 2) NOT NULL,
+ FOREIGN KEY (OrderID) REFERENCES tblOrder (OrderID),
+ FOREIGN KEY (ProductID) REFERENCES tblProduct (ProductID)
+);
+
+
+INSERT INTO tblProductOrder (OrderID, ProductID, Quantity)
+SELECT
+(SELECT TOP 1 OrderID FROM tblOrder WHERE OrderDate = '2022-03-15' ORDER BY OrderID), 
+(SELECT TOP 1 ProductID FROM tblProduct WHERE ProductName = 'Costco Logo Sweatshirt' ORDER BY ProductID),
+13;
+
+
+INSERT INTO tblProductOrder (OrderID, ProductID, Quantity)
+SELECT
+(SELECT TOP 1 OrderID FROM tblOrder WHERE OrderDate = '2022-09-10' ORDER BY OrderID),
+(SELECT TOP 1 ProductID FROM tblProduct WHERE ProductName = 'Call of Duty' ORDER BY ProductID),
+1;
+
+
+INSERT INTO tblProductOrder (OrderID, ProductID, Quantity)
+SELECT
+(SELECT TOP 1 OrderID FROM tblOrder WHERE OrderDate = '2020-02-10' ORDER BY OrderID),
+(SELECT TOP 1 ProductID FROM tblProduct WHERE ProductName = 'Organic Spring Salad' ORDER BY ProductID),
+2;
+
+
+INSERT INTO tblProductOrder (OrderID, ProductID, Quantity)
+SELECT
+(SELECT TOP 1 OrderID FROM tblOrder WHERE OrderDate = '2022-09-10' ORDER BY OrderID),
+(SELECT TOP 1 ProductID FROM tblProduct WHERE ProductName = 'Apple Watch SE (2023)' ORDER BY ProductID),
+1;
+
+
+
+
+--27-Review--------------------------------------------------------------------
+
+
+CREATE TABLE tblReview(
+  ReviewID INT IDENTITY(1, 1) PRIMARY KEY,
+  ProductOrderID INT,
+  RatingID INT,
+  ReviewDescr VARCHAR(225) NOT NULL,
+  ReviewDate DATE NOT NULL,
+  FOREIGN KEY (ProductOrderID) REFERENCES tblProductOrder (ProductOrderID),
+  FOREIGN KEY (RatingID) REFERENCES tblRating (RatingID)
+);
+
+
+-- execute nested procedure AddReview to insert values into tblReview
+EXEC AddReview
+  @ProductName = 'Costco Logo Sweatshirt',
+  @OrderDate = '2022-03-15',
+  @RateName = 'Excellent',
+  @ReviewDescr = 'Great product, highly recommended!',
+  @ReviewDate = '2022-04-10';
+
+
+EXEC AddReview
+  @ProductName = 'Call of Duty',
+  @OrderDate = '2022-09-10',
+  @RateName = 'Good',
+  @ReviewDescr = 'It is good',
+  @ReviewDate = '2022-10-01';
+
+
+EXEC AddReview
+ @ProductName = 'Organic Spring Salad',
+ @OrderDate = '2020-02-15',
+ @RateName = 'Poor',
+ @ReviewDescr = 'This salad went bad three days after purchased... I am disapointed.',
+ @ReviewDate = '2020-02-18';
+
+
+
+
+--28-SupplierContact-----------------------------------------------------------
+
+
+CREATE TABLE tblSupplierContact(
+  SupplierContactID INT IDENTITY(1, 1) PRIMARY KEY,
+  SupplierID INT,
+  ContactID INT,
+  FOREIGN KEY (SupplierID) REFERENCES tblSupplier (SupplierID),
+  FOREIGN KEY (ContactID) REFERENCES tblContact (ContactID)
+);
+
+
+INSERT INTO tblSupplierContact (SupplierID, ContactID)
+VALUES
+  ((SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'SONY'),
+  (SELECT ContactID FROM tblContact WHERE ContactFName = 'Elizabeth' AND ContactLName = 'Woodlner')),
+  ((SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Apple'),
+  (SELECT ContactID FROM tblContact WHERE ContactFName = 'Jame' AND ContactLName = 'Zhang')),
+  ((SELECT SupplierID FROM tblSupplier WHERE SupplierName = 'Wahaha'),
+  (SELECT ContactID FROM tblContact WHERE ContactFName = 'Doryi' AND ContactLName = 'Wang'));
+
+
+--29-Staff---------------------------------------------------------------------
+
+
+CREATE TABLE tblStaff (
+  StaffID INT IDENTITY(1,1) PRIMARY KEY,
+  GenderID INT,
+  StaffFName VARCHAR(100) NOT NULL,
+  StaffLName VARCHAR(100) NOT NULL,
+  StaffStartDate DATE NOT NULL,
+  StaffEndDate DATE,
+  StaffEmail VARCHAR(255) NOT NULL,
+  StaffPhone VARCHAR(100) NOT NULL,
+  FOREIGN KEY (GenderID) REFERENCES tblGender(GenderID)
+);
+
+
+INSERT INTO tblStaff (GenderID, StaffFName, StaffLName, StaffStartDate, StaffEndDate, StaffPhone, StaffEmail)
+VALUES
+  ((SELECT GenderID FROM tblGender WHERE GenderName = 'Male'), 'John', 'Snow', '2024-02-15', '2025-06-15', '123-456-7890', 'winterfall_lord@gmail.com'),
+  ((SELECT GenderID FROM tblGender WHERE GenderName = 'Male'), 'Rick', 'Sanchez', '2024-03-01', NULL, '111-222-333', 'rick@gmail.com'),
+  ((SELECT GenderID FROM tblGender WHERE GenderName = 'Female'), 'Cardi', 'B', '2021-03-01', NULL, '888-222-333', 'cardib@gmail.com'),
+  ((SELECT GenderID FROM tblGender WHERE GenderName = 'Other'), 'Morty', 'Smith', '2024-04-10', '2030-04-10', '666-888-9999', 'morty@gmail.com');
+
+
+--30-Schedule------------------------------------------------------------------
+
+
+CREATE TABLE tblSchedule (
+  ScheduleID INT IDENTITY(1,1) PRIMARY KEY,
+  WarehouseID INT,
+  DayID INT,
+  OpeningTime TIME NOT NULL,
+  ClosingTime TIME NOT NULL,
+  ScheduleDate DATE NOT NULL,
+  FOREIGN KEY (WarehouseID) REFERENCES tblWarehouse(WarehouseID),
+  FOREIGN KEY (DayID) REFERENCES tblDay(DayID)
+);
+
+
+INSERT INTO tblSchedule (WarehouseID, DayID, OpeningTime, ClosingTime, ScheduleDate)
+VALUES
+  ((SELECT WarehouseID FROM tblWarehouse WHERE WarehouseName = 'Distribution Center'),
+   (SELECT DayID FROM tblDay WHERE DayName = 'Monday'),
+   '08:00:00',
+   '17:00:00',
+   '2024-02-20'),
+  ((SELECT WarehouseID FROM tblWarehouse WHERE WarehouseName = 'Retail'),
+   (SELECT DayID FROM tblDay WHERE DayName = 'Tuesday'),
+   '09:00:00',
+   '18:00:00',
+   '2024-02-21'),
+  ((SELECT WarehouseID FROM tblWarehouse WHERE WarehouseName = 'Bulk Storage Facility'),
+   (SELECT DayID FROM tblDay WHERE DayName = 'Wednesday'),
+   '07:00:00',
+   '16:00:00',
+   '2024-02-22');
+
+
+--31-StaffSchedule-------------------------------------------------------------
+
+
+CREATE TABLE tblStaffSchedule (
+StaffScheduleID INT IDENTITY(1,1) PRIMARY KEY,
+ScheduleID INT,
+StaffID INT,
+PositionID INT,
+FOREIGN KEY (ScheduleID) REFERENCES tblSchedule(ScheduleID),
+FOREIGN KEY (StaffID) REFERENCES tblStaff(StaffID),
+FOREIGN KEY (PositionID) REFERENCES tblPosition(PositionID)
+);
+
+
+INSERT INTO tblStaffSchedule (ScheduleID, StaffID, PositionID)
+VALUES
+  ((SELECT ScheduleID FROM tblSchedule WHERE ScheduleDate = '2024-02-20' AND WarehouseID = (SELECT WarehouseID FROM tblWarehouse WHERE WarehouseName = 'Distribution Center')),
+   (SELECT StaffID FROM tblStaff WHERE StaffFName = 'John' AND StaffLName = 'Snow'),
+   (SELECT PositionID FROM tblPosition WHERE PositionName = 'Warehouse Manager')),
+  ((SELECT ScheduleID FROM tblSchedule WHERE ScheduleDate = '2024-02-21' AND WarehouseID = (SELECT WarehouseID FROM tblWarehouse WHERE WarehouseName = 'Retail Center')),
+   (SELECT StaffID FROM tblStaff WHERE StaffFName = 'Rick' AND StaffLName = 'Sanchez'),
+   (SELECT PositionID FROM tblPosition WHERE PositionName = 'Sales Associate')),
+  ((SELECT ScheduleID FROM tblSchedule WHERE ScheduleDate = '2024-02-22' AND WarehouseID = (SELECT WarehouseID FROM tblWarehouse WHERE WarehouseName = 'Bulk Storage Facility')),
+   (SELECT StaffID FROM tblStaff WHERE StaffFName = 'Cardi' AND StaffLName = 'B'),
+   (SELECT PositionID FROM tblPosition WHERE PositionName = 'Deli Service Worker'));
+
+
+--32-CustomerCampaign----------------------------------------------------------
+
+
+CREATE TABLE tblCustomerCampaign (
+ CustomerCampaignID INT IDENTITY(1, 1) PRIMARY KEY,
+ CampaignID INT NOT NULL,
+ CustomerID INT NOT NULL,
+ FOREIGN KEY (CampaignID) REFERENCES tblCampaign(CampaignID),
+ FOREIGN KEY (CustomerID) REFERENCES tblCustomer(CustomerID)
+);
