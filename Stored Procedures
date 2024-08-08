@@ -1,0 +1,567 @@
+Stored Procedure 1: Populate tblProductOrder with a nested stored procedure(validates Customers and Products on browsing/shopping)
+-- Procedure to get CustomerID
+CREATE OR ALTER PROCEDURE GetCustomerID
+   @CustomerFName VARCHAR(255),
+   @CustomerLName VARCHAR(255),
+   @DOB DATE,
+   @CustomerID INT OUTPUT
+AS
+BEGIN
+    SELECT @CustomerID = CustomerID
+    FROM tblCustomer
+    WHERE CustomerFName = @CustomerFName
+    AND CustomerLName = @CustomerLName
+    AND DOB = @DOB;
+END;
+GO
+
+
+-- Procedure to get ProductID
+CREATE OR ALTER PROCEDURE GetProductID
+   @ProductName VARCHAR(255),
+   @ProductID INT OUTPUT
+AS
+BEGIN
+    SELECT @ProductID = ProductID
+    FROM tblProduct
+    WHERE ProductName = @ProductName;
+END;
+GO
+
+
+-- Procedure to add a ProductOrder
+CREATE OR ALTER PROCEDURE AddProductOrder
+   @CustomerFName VARCHAR(255),
+   @CustomerLName VARCHAR(255),
+   @DOB DATE,
+   @ProductName VARCHAR(255),
+   @Quantity INT,
+   @OrderDate DATE
+AS
+BEGIN
+    DECLARE @CustomerID INT, @ProductID INT, @OrderID INT;
+
+
+    -- Get CustomerID
+    EXEC GetCustomerID
+        @CustomerFName = @CustomerFName,
+        @CustomerLName = @CustomerLName,
+        @DOB = @DOB,
+        @CustomerID = @CustomerID OUTPUT;
+
+
+    -- Get ProductID
+    EXEC GetProductID
+        @ProductName = @ProductName,
+        @ProductID = @ProductID OUTPUT;
+
+
+    -- Error handling if CustomerID or ProductID could not be retrieved
+    IF @CustomerID IS NULL OR @ProductID IS NULL
+    BEGIN
+        PRINT '@CustomerID and @ProductID is empty...check spelling';
+        THROW 55002, 'Invalid Customer or Product information.', 1;
+    END
+
+
+    -- Add to ProductOrder
+    INSERT INTO tblProductOrder (OrderID, ProductID, Quantity)
+    VALUES (@OrderID, @ProductID, @Quantity);
+    SET @OrderID = SCOPE_IDENTITY();
+END;
+GO
+
+
+-- Stored Procedure 2: Conduct a check-out process based on a single customer. This is populating the Order and ProductOrder tables
+CREATE OR ALTER PROCEDURE CheckoutProcess
+    @CustFname VARCHAR(255),
+    @CustLname VARCHAR(255),
+    @DOB DATE,
+    @ProductName VARCHAR(255),
+    @Quantity INT,
+    @OrderDate DATE = NULL -- Default to current date if not provided
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @CustomerID INT, @ProductID INT, @OrderID INT;
+
+
+    -- Initialize the order date if not provided
+    IF @OrderDate IS NULL SET @OrderDate = GETDATE();
+
+
+    -- Error handling for NULL parameters
+    IF @CustFname IS NULL OR @CustLname IS NULL OR @DOB IS NULL OR @ProductName IS NULL OR @Quantity IS NULL
+    BEGIN
+        PRINT 'Input parameter is empty';
+        THROW 56434, 'Input parameter cannot be NULL; process is terminating', 1;
+    END
+
+
+    BEGIN TRANSACTION T1; -- Start base transaction
+
+
+    EXEC GetCustomerID
+        @CustomerFName = @CustFname,
+        @CustomerLName = @CustLname,
+        @DOB = @DOB,
+        @CustomerID = @CustomerID OUTPUT;
+
+
+    IF @CustomerID IS NULL
+    BEGIN
+        PRINT 'Customer retrieval failed';
+        ROLLBACK TRANSACTION T1;
+        RETURN;
+    END
+
+
+    -- Create a new order
+    INSERT INTO tblOrder (CustomerID, OrderDate)
+    VALUES (@CustomerID, @OrderDate);
+
+
+    SET @OrderID = SCOPE_IDENTITY(); -- Get the newly created OrderID
+
+
+    -- Retrieve ProductID
+    EXEC GetProductID
+        @ProductName = @ProductName,
+        @ProductID = @ProductID OUTPUT;
+
+
+    IF @ProductID IS NULL
+    BEGIN
+        PRINT 'Product retrieval failed';
+        ROLLBACK TRANSACTION T1;
+        RETURN;
+    END
+
+
+    -- Insert into ProductOrder
+    INSERT INTO tblProductOrder (OrderID, ProductID, Quantity)
+    VALUES (@OrderID, @ProductID, @Quantity);
+
+
+    -- Nested transaction management
+    IF @@TRANCOUNT = 1
+    BEGIN
+        COMMIT TRANSACTION T1; -- Commit the base transaction
+    END
+    ELSE
+    BEGIN
+        PRINT 'Unexpected transaction count; rolling back.';
+        ROLLBACK TRANSACTION T1;
+    END
+END;
+GO
+
+
+
+
+-- Stored Procedure 3: Populate tblContact for suppliers
+-- GetRoleID
+CREATE OR ALTER PROCEDURE GetRoleID
+   @RoleName VARCHAR(100),
+   @RoleID INT OUTPUT
+AS
+BEGIN
+   SET @RoleID = (
+       SELECT RoleID
+       FROM tblRole
+       WHERE RoleName = @RoleName
+   );
+END;
+GO
+
+
+-- GetContactTypeID
+CREATE OR ALTER PROCEDURE GetContactTypeID
+   @ContactTypeName VARCHAR(100),
+   @ContactTypeID INT OUTPUT
+AS
+BEGIN
+   SET @ContactTypeID = (
+       SELECT ContactTypeID
+       FROM tblContactType
+       WHERE ContactTypeName = @ContactTypeName
+   );
+END;
+GO
+
+
+-- POPtblContact
+CREATE OR ALTER PROCEDURE POPtblContact
+   @RoleName VARCHAR(100),
+   @ContactTypeName VARCHAR(100),
+   @ContactFName VARCHAR(100),
+   @ContactLName VARCHAR(100),
+   @ContactPhone VARCHAR(100),
+   @ContactEmail VARCHAR(100)
+AS
+BEGIN
+
+
+   BEGIN TRANSACTION;
+
+
+   DECLARE @RoleID INT,
+           @ContactTypeID INT;
+
+
+   BEGIN TRY
+
+
+       EXEC GetRoleID
+       @RoleName = @RoleName,
+       @RoleID = @RoleID OUTPUT;
+
+
+       EXEC GetContactTypeID
+       @ContactTypeName = @ContactTypeName,
+       @ContactTypeID = @ContactTypeID OUTPUT;
+
+
+       IF @RoleID IS NULL
+       BEGIN
+           PRINT '@RoleID Role ID is empty...check spelling';
+           THROW 50001, '@RoleID Role ID cannot be NULL; process is terminating', 1;
+       END
+
+
+       IF @ContactTypeID IS NULL
+       BEGIN
+           PRINT '@ContactTypeID Contact Type ID is empty...check spelling';
+           THROW 50002, '@ContactTypeID Contact Type ID cannot be NULL; process is terminating', 1;
+       END
+
+
+       INSERT INTO tblContact(
+           ContactTypeID,
+           RoleID,
+           ContactFName,
+           ContactLName,
+           ContactPhone,
+           ContactEmail)
+       VALUES(
+           @ContactTypeID,
+           @RoleID,
+           @ContactFName,
+           @ContactLName,
+           @ContactPhone,
+           @ContactEmail);
+
+
+       COMMIT TRANSACTION;
+   END TRY
+   BEGIN CATCH
+       ROLLBACK TRANSACTION;
+       THROW;
+   END CATCH
+END;
+GO
+
+
+-- Stored Procedure 4: Populate tblProduct with ProductType and Supplier Information
+-- GetProductTypeID
+CREATE OR ALTER PROCEDURE GetProductTypeID
+   @ProductTypeName VARCHAR(100),
+   @ProductTypeID INT OUTPUT
+AS
+BEGIN
+   SET @ProductTypeID = (
+       SELECT ProductTypeID
+       FROM tblProductType
+       WHERE ProductTypeName = @ProductTypeName
+   );
+END;
+GO
+
+
+-- GetSupplierID
+CREATE OR ALTER PROCEDURE GetSupplierID
+   @SupplierName VARCHAR(100),
+   @SupplierID INT OUTPUT
+AS
+BEGIN
+   SET @SupplierID = (
+       SELECT SupplierID
+       FROM tblSupplier
+       WHERE SupplierName = @SupplierName
+   );
+END;
+GO
+
+
+-- Populate tblProduct
+CREATE OR ALTER PROCEDURE POPtblProduct
+   @ProductTypeName VARCHAR(100),
+   @SupplierName VARCHAR(100),
+   @ProductName VARCHAR(100),
+   @Cost DECIMAL(10, 2),
+   @Price DECIMAL(10, 2)
+AS
+BEGIN
+
+
+   BEGIN TRANSACTION;
+
+
+   DECLARE @ProductTypeID INT,
+           @SupplierID INT;
+
+
+   BEGIN TRY
+
+
+       EXEC GetProductTypeID
+       @ProductTypeName = @ProductTypeName,
+       @ProductTypeID = @ProductTypeID OUTPUT;
+
+
+       EXEC GetSupplierID
+       @SupplierName = @SupplierName,
+       @SupplierID = @SupplierID OUTPUT;
+
+
+       IF @ProductTypeID IS NULL
+       BEGIN
+           PRINT '@ProductTypeID Product Type ID is empty...check spelling';
+           THROW 51001, '@ProductTypeID Product Type ID cannot be NULL; process is terminating', 1;
+       END
+
+
+       IF @SupplierID IS NULL
+       BEGIN
+           PRINT '@SupplierID Supplier ID is empty...check spelling';
+           THROW 51002, '@SupplierID ID cannot be NULL; process is terminating', 1;
+       END
+
+
+       INSERT INTO tblProduct(
+           ProductTypeID,
+           SupplierID,
+           ProductName,
+           Cost,
+           Price
+       )
+       VALUES(
+           @ProductTypeID,
+           @SupplierID,
+           @ProductName,
+           @Cost,
+           @Price
+       );
+       COMMIT TRANSACTION;
+   END TRY
+   BEGIN CATCH
+       ROLLBACK TRANSACTION;
+       THROW;
+   END CATCH
+END;
+GO
+
+Stored Procedure 5: Populated tblSchedule
+​​-- Procedure to get WarehouseID
+CREATE OR ALTER PROCEDURE GetWarehouseID
+  @WarehouseName VARCHAR(255),
+  @WarehouseID INT OUTPUT
+AS
+BEGIN
+   SELECT @WarehouseID = WarehouseID
+   FROM tblWarehouse
+   WHERE WarehouseName = @WarehouseName;
+END;
+GO
+
+
+-- Procedure to get DayID
+CREATE OR ALTER PROCEDURE GetDayID
+  @DayName VARCHAR(255),
+  @DayID INT OUTPUT
+AS
+BEGIN
+   SELECT @DayID = DayID
+   FROM tblDay
+   WHERE DayName = @DayName;
+END;
+GO
+
+
+-- Procedure to add a schedule
+CREATE OR ALTER PROCEDURE AddSchedule
+  @WarehouseName VARCHAR(255),
+  @DayName VARCHAR(255),
+  @OpeningTime TIME,
+  @ClosingTime TIME,
+  @ScheduleDate DATE,
+  @ScheduleID INT OUTPUT
+AS
+BEGIN
+   DECLARE @WarehouseID INT, @DayID INT;
+
+
+   EXEC GetWarehouseID
+       @WarehouseName = @WarehouseName,
+       @WarehouseID = @WarehouseID OUTPUT;
+
+
+   EXEC GetDayID
+       @DayName = @DayName,
+       @DayID = @DayID OUTPUT;
+
+
+   -- Error handling
+   IF @WarehouseID IS NULL OR @DayID IS NULL
+   BEGIN
+       PRINT 'Error: WarehouseID or DayID could not be empty... Check spelling.';
+       THROW 55002, 'Invalid information', 1;
+   END
+
+
+   INSERT INTO tblSchedule (WarehouseID, DayID, OpeningTime, ClosingTime, ScheduleDate)
+   VALUES (@WarehouseID, @DayID, @OpeningTime, @ClosingTime, @ScheduleDate);
+   SET @ScheduleID = SCOPE_IDENTITY();
+END;
+GO
+
+Stored Procedure 6: Populated tblWarehouse
+-- Procedure to get WarehouseTypeID
+CREATE OR ALTER PROCEDURE GetWarehouseTypeID
+  @WarehouseTypeName VARCHAR(225),
+  @WarehouseTypeID INT OUTPUT
+AS
+BEGIN
+   SELECT @WarehouseTypeID = WarehouseTypeID
+   FROM tblWarehouseType
+   WHERE WarehouseTypeName = @WarehouseTypeName;
+END;
+GO
+
+
+-- Procedure to get StateID
+CREATE OR ALTER PROCEDURE GetStateID
+  @StateName VARCHAR(225),
+  @StateID INT OUTPUT
+AS
+BEGIN
+   SELECT @StateID = StateID
+   FROM tblState
+   WHERE StateName = @StateName;
+END;
+GO
+
+
+--Procedure to add a warehouse
+CREATE OR ALTER PROCEDURE AddWarehouse
+  @WarehouseTypeName VARCHAR(225),
+  @StateName VARCHAR(225),
+  @WarehouseName VARCHAR(225),
+  @WarehouseAddress VARCHAR(225),
+  @WarehouseCity VARCHAR(225),
+  @WarehouseZip FLOAT,
+  @OpeningDate DATE,
+  @WarehousePhone VARCHAR(20),
+  @WarehouseID INT OUTPUT
+AS
+BEGIN
+   DECLARE @WarehouseTypeID INT, @StateID INT;
+
+
+   EXEC GetWarehouseTypeID
+       @WarehouseTypeName = @WarehouseTypeName,
+       @WarehouseTypeID = @WarehouseTypeID OUTPUT;
+
+
+   EXEC GetStateID
+       @StateName = @StateName,
+       @StateID = @StateID OUTPUT;
+
+
+   -- Error handling
+   IF @WarehouseTypeID IS NULL OR @StateID IS NULL
+   BEGIN
+       PRINT 'WarehouseTypeID or StateID could not be empty. Check the spelling.';
+       THROW 55002, 'Invalid Information', 1;
+   END
+
+
+
+
+   INSERT INTO tblWarehouse (WarehouseTypeID, StateID, WarehouseName, WarehouseAddress, WarehouseCity, WarehouseZip, OpeningDate, WarehousePhone)
+   VALUES (@WarehouseTypeID, @StateID, @WarehouseName, @WarehouseAddress, @WarehouseCity, @WarehouseZip, @OpeningDate, @WarehousePhone);
+   SET @WarehouseID = SCOPE_IDENTITY();
+
+
+END;
+GO
+
+
+
+
+Stored Procedure 7: Insert values into tblReivew
+-- procedure to get ProductOrderID
+CREATE OR ALTER PROCEDURE GetProductOrderID
+   @ProductName VARCHAR(255),
+   @OrderDate DATE,
+   @ProductOrderID INT OUTPUT
+AS
+BEGIN
+   SELECT @ProductOrderID = PO.ProductOrderID
+   FROM tblProductOrder AS PO
+   INNER JOIN tblOrder AS O ON PO.OrderID = O.OrderID
+   INNER JOIN tblProduct AS P ON PO.ProductID = P.ProductID
+   WHERE P.ProductName = @ProductName AND O.OrderDate = @OrderDate;
+END;
+GO
+
+
+-- Procedure to get RatingID
+CREATE OR ALTER PROCEDURE GetRatingID
+   @RateName VARCHAR(225),
+   @RatingID INT OUTPUT
+AS
+BEGIN
+   SELECT @RatingID = R.RatingID
+   FROM tblRating R
+   WHERE R.RateName = @RateName;
+END;
+GO
+
+
+-- Procedure to Add a Review
+CREATE OR ALTER PROCEDURE AddReview
+   @ProductName VARCHAR(255),
+   @OrderDate DATE,
+   @RateName VARCHAR(225),
+   @ReviewDescr VARCHAR(225),
+   @ReviewDate DATE
+AS
+BEGIN
+   DECLARE @ProductOrderID INT, @RatingID INT;
+
+
+   EXEC GetProductOrderID @ProductName, @OrderDate, @ProductOrderID OUTPUT;
+
+
+   EXEC GetRatingID @RateName, @RatingID OUTPUT;
+
+
+   IF @ProductOrderID IS NOT NULL AND @RatingID IS NOT NULL
+   BEGIN
+       INSERT INTO tblReview (ProductOrderID, RatingID, ReviewDescr, ReviewDate)
+       VALUES (@ProductOrderID, @RatingID, @ReviewDescr, @ReviewDate);
+   END
+   ELSE
+   BEGIN
+       -- Error handling
+       PRINT '@ProductOrderID or @RatingID can not be empty...check spelling';
+       THROW 50002, 'Invalid information; process is terminating', 1;
+
+
+   END
+END;
+GO
+
+
+
