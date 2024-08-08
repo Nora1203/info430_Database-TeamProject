@@ -1,0 +1,289 @@
+USE team7_Project4;
+GO
+
+
+-- 1. Membership Expiry Status Computed Column Function:
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'dbo.fnMembershipExpiryStatus') AND type in (N'FN', N'IF', N'TF', N'FS', N'FT'))
+DROP FUNCTION dbo.fnMembershipExpiryStatus;
+GO
+
+
+CREATE FUNCTION fnMembershipExpiryStatus(@PK INT)
+RETURNS BIT
+AS
+BEGIN
+    DECLARE @IsActive BIT;
+    DECLARE @Today DATE = GETDATE();
+
+
+    SELECT @IsActive = CASE
+                         WHEN @Today <= M.ExpirationDate THEN 1
+                         ELSE 0
+                       END
+    FROM tblMembership M
+    WHERE M.MembershipID = @PK;
+
+
+    RETURN @IsActive;
+END
+GO
+
+
+IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+           WHERE TABLE_NAME = 'tblMembership' AND COLUMN_NAME = 'IsActiveStatus')
+BEGIN
+    ALTER TABLE tblMembership
+    DROP COLUMN IsActiveStatus;
+END
+GO
+
+
+ALTER TABLE tblMembership
+ADD IsActiveStatus AS (dbo.fnMembershipExpiryStatus(MembershipID));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 2. Age of Customer Computed Column Function:
+CREATE FUNCTION fnCustomerAge(@PK INT)
+RETURNS INT
+AS
+BEGIN
+    DECLARE @Age INT;
+    DECLARE @Today DATE = GETDATE();
+
+
+    SELECT @Age = DATEDIFF(year, C.DOB, @Today) - CASE
+                                                      WHEN MONTH(C.DOB) > MONTH(@Today) OR
+                                                           (MONTH(C.DOB) = MONTH(@Today) AND DAY(C.DOB) > DAY(@Today))
+                                                      THEN 1
+                                                      ELSE 0
+                                                   END
+    FROM tblCustomer C
+    WHERE C.CustomerID = @PK;
+
+
+    RETURN @Age;
+END
+GO
+
+
+ALTER TABLE tblCustomer
+ADD CalculatedAge AS (dbo.fnCustomerAge(CustomerID));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 3. Creates a summary of SUPPLIER contact's information, including their
+-- name, role, responsibility, and the company (also company type) they work with.
+ALTER TABLE tblContact
+DROP COLUMN IF EXISTS SupplierDetail;
+GO
+
+
+CREATE OR ALTER FUNCTION fnConcatSupplierDetail(@ContactID INT)
+RETURNS VARCHAR(1000)
+AS
+BEGIN
+   DECLARE @SupplierDetail VARCHAR(1000);
+
+
+   SELECT @SupplierDetail =
+                           C.ContactFName +
+                           ' ' +
+                           C.ContactLName +
+                           ' - ' +
+                           R.RoleName +
+                           ' responsible for ' +
+                           CT.ContactTypeName +
+                           ' at a ' +
+                           ST.SupplierTypeName +
+                           ' level company: ' +
+                           S.SupplierName
+
+
+   FROM tblContact C
+   JOIN tblContactType CT ON C.ContactTypeID = CT.ContactTypeID
+   JOIN tblRole R ON C.RoleID = R.RoleID
+   JOIN tblSupplierContact SC ON C.ContactID = SC.ContactID
+   JOIN tblSupplier S ON SC.SupplierID = S.SupplierID
+   JOIN tblSupplierType ST ON S.SupplierTypeID = ST.SupplierTypeID
+   WHERE C.ContactID = @ContactID
+
+
+   RETURN @SupplierDetail
+END;
+GO
+
+
+ALTER TABLE tblContact
+ADD SupplierDetail AS (dbo.fnConcatSupplierDetail(ContactID));
+
+
+SELECT * FROM tblContact
+
+
+-- 4. Calculate Return On Sales (ROS)
+ALTER TABLE tblProduct
+DROP COLUMN IF EXISTS ROSinPercentage;
+GO
+
+
+CREATE OR ALTER FUNCTION fnCalculateReturnOnSales(@ProductID INT)
+RETURNS DECIMAL(10, 2)
+AS
+BEGIN
+   DECLARE @Cost DECIMAL(10, 2),
+           @Price DECIMAL(10, 2),
+           @ROS DECIMAL(10, 2);
+
+
+   SELECT @Cost = P.Cost,
+          @Price = P.Price
+   FROM tblProduct P
+   WHERE P.ProductID = @ProductID;
+
+
+   IF @Cost = 0
+       SET @ROS = NULL -- Consider the infinite ROS
+   ELSE
+       SET @ROS = ((@Price - @Cost) / @Cost) * 100;
+
+
+   RETURN @ROS
+END;
+GO
+
+
+ALTER TABLE tblProduct
+ADD ROSinPercentage AS (dbo.fnCalculateReturnOnSales(ProductID));
+
+
+SELECT * FROM tblProduct
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- 5. Create the function to calculate the average rating score for each product
+CREATE OR ALTER FUNCTION fnAverageRatingForProduct(@ProductID INT)
+RETURNS DECIMAL(10, 2)
+AS
+BEGIN
+   DECLARE @AvgRating DECIMAL(10, 2);
+
+
+   SELECT @AvgRating = AVG(CAST(r.RateScore AS DECIMAL(10,2)))
+   FROM tblReview rv
+   INNER JOIN tblProductOrder po ON rv.ProductOrderID = po.ProductOrderID
+   INNER JOIN tblRating r ON rv.RatingID = r.RatingID
+   WHERE po.ProductID = @ProductID;
+
+
+   RETURN ISNULL(@AvgRating, 0); -- Return 0 if no ratings are found
+END;
+GO
+
+
+SELECT po.ProductID, dbo.fnAverageRatingForProduct(po.ProductID) AS AverageRatingScore
+FROM tblProductOrder po
+GROUP BY po.ProductID;
+
+
+
+
+
+
+-- 6. Create the function to calculate the order subtotals
+CREATE OR ALTER FUNCTION fnCalculateSubtotal(@ProductOrderID INT)
+RETURNS DECIMAL(10, 2)
+AS
+BEGIN
+   DECLARE @Subtotal DECIMAL(10, 2);
+
+
+   SELECT @Subtotal = p.Price * po.Quantity
+   FROM tblProductOrder po
+   INNER JOIN tblProduct p ON po.ProductID = p.ProductID
+   WHERE po.ProductOrderID = @ProductOrderID;
+
+
+   RETURN @Subtotal;
+END;
+GO
+
+
+ALTER TABLE tblProductOrder
+ADD Subtotal DECIMAL(10, 2);
+GO
