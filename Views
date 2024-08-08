@@ -1,0 +1,211 @@
+USE team7_Project4
+GO
+
+
+-- Views 1:
+-- Filter the name, average return on sales (ROS), number of product,
+-- and ROS rank for the international supplier with the average product ROS
+-- greater than 10% that supplies more than 3 product
+CREATE OR ALTER VIEW vwInternationalSupplierAvgRankROS AS
+WITH SupplierAverageROS AS (
+  SELECT S.SupplierID,
+         S.SupplierName,
+         ST.SupplierTypeName,
+         AVG(P.ROSinPercentage) AS AvgROS,
+         COUNT(P.ProductID) AS ProductNum
+  FROM tblSupplier S
+  JOIN tblProduct P ON S.SupplierID = P.SupplierID
+  JOIN tblSupplierType ST ON S.SupplierTypeID = ST.SupplierTypeID
+  WHERE ST.SupplierTypeName = 'International'
+  GROUP BY S.SupplierID,
+           S.SupplierName,
+           ST.SupplierTypeName
+  HAVING AVG(P.ROSinPercentage) > 10
+)
+SELECT SupplierName,
+     AvgROS,
+     ProductNum,
+     RANK() OVER (ORDER BY AvgROS DESC) AS RankROS
+FROM SupplierAverageROS
+WHERE ProductNum > 3
+GO
+
+
+SELECT * FROM vwInternationalSupplierAvgRankROS;
+GO
+
+
+-- Views 2:
+-- Create a performance analysis based on the rank of average ROS for each product type in
+-- 'Electronics', 'Apparel', 'Drinks', 'Meat', 'Video Games', 'Toy'.
+-- Only select product types with a total number of products greater or equal to 3,
+-- and consider only individual products with an ROS greater than 5%.
+CREATE OR ALTER VIEW vwProductTypePerformance AS
+SELECT PT.ProductTypeName,
+     COUNT(P.ProductID) AS TotalProduct,
+     COUNT(DISTINCT S.SupplierID) AS NumberOfSuppliers,
+     ROUND(AVG(P.Cost), 2) AS AverageCost,
+     ROUND(AVG(P.Price), 2) AS AvgeragePrice,
+     ROUND(AVG(P.ROSinPercentage), 0) AS Avgerageros,
+     RANK() OVER (ORDER BY AVG(P.ROSinPercentage) DESC) AS ROSRank
+FROM tblProductType PT
+JOIN tblProduct P ON PT.ProductTypeID = P.ProductTypeID
+JOIN tblSupplier S ON P.SupplierID = S.SupplierID
+WHERE PT.ProductTypeName IN ('Electronics', 'Apparel', 'Drinks', 'Meat', 'Video Games', 'Toy')
+AND P.ROSinPercentage > 5
+GROUP BY PT.ProductTypeName
+HAVING COUNT(P.ProductID) >= 3;
+GO
+
+
+SELECT * FROM vwProductTypePerformance;
+GO
+
+
+-- Views 3:
+-- Filter out underperforming products with an average rating score under 3 that were given in 2020.
+-- and show the product ID, product name, supplier ID, and supplier name.
+CREATE OR ALTER VIEW vwProductsUnderperforming2020 AS
+WITH ProductRatings AS (
+  SELECT
+      po.ProductID,
+      AVG(CAST(r.RateScore AS DECIMAL(10,2))) AS AverageRatingScore
+  FROM
+      tblProductOrder po
+  INNER JOIN
+      tblReview rv ON po.ProductOrderID = rv.ProductOrderID
+  INNER JOIN
+      tblRating r ON rv.RatingID = r.RatingID
+  WHERE
+      YEAR(rv.ReviewDate) = 2020
+  GROUP BY
+      po.ProductID
+  HAVING
+      AVG(CAST(r.RateScore AS DECIMAL(10,2))) < 3.0
+)
+SELECT
+  pr.ProductID,
+  p.ProductName,
+  p.SupplierID,
+  s.SupplierName,
+  pr.AverageRatingScore
+FROM
+  ProductRatings pr
+INNER JOIN
+  tblProduct p ON pr.ProductID = p.ProductID
+INNER JOIN
+  tblSupplier s ON p.SupplierID = s.SupplierID;
+GO
+
+
+SELECT * FROM vwProductsUnderperforming2020;
+GO
+
+
+-- Views 4:
+-- Filter out the most popular product in 2022
+-- and calculates its percentage of total sales
+CREATE OR ALTER VIEW vwMostPopularProductPercentage2022 AS
+WITH TotalSales2022 AS (
+  SELECT
+      SUM(PO.Quantity) AS TotalQuantity
+  FROM
+      tblProductOrder PO
+  INNER JOIN
+      tblOrder O ON PO.OrderID = O.OrderID
+  WHERE
+      YEAR(O.OrderDate) = 2022
+), ProductSales2022 AS (
+  SELECT TOP 1
+      PO.ProductID,
+      SUM(PO.Quantity) AS QuantitySold
+  FROM
+      tblProductOrder PO
+  INNER JOIN
+      tblOrder O ON PO.OrderID = O.OrderID
+  WHERE
+      YEAR(O.OrderDate) = 2022
+  GROUP BY
+      PO.ProductID
+  ORDER BY
+      SUM(PO.Quantity) DESC
+)
+SELECT
+  PS.ProductID,
+  P.ProductName,
+  PS.QuantitySold,
+  CAST(PS.QuantitySold AS DECIMAL(10,2)) / TS.TotalQuantity * 100 AS PercentageOfTotalSales
+FROM
+  ProductSales2022 PS
+CROSS JOIN
+  TotalSales2022 TS
+INNER JOIN
+  tblProduct P ON PS.ProductID = P.ProductID;
+GO
+
+
+SELECT * FROM vwMostPopularProductPercentage2022;
+GO
+
+
+-- Views 5:
+-- Write a query to determine the total amount spent on orders by each 'Business' membership type customer.
+CREATE OR ALTER VIEW vwBusinessMembershipOrderTotals
+AS
+SELECT
+ C.CustomerFName,
+ C.CustomerLName,
+ C.CustomerEmail,
+ SUM(P.Subtotal) AS TotalSpent
+FROM
+ tblCustomer C
+INNER JOIN
+ tblMembership M ON C.CustomerID = M.CustomerID
+INNER JOIN
+ tblMembershipType MT ON M.MembershipTypeID = MT.MembershipTypeID
+INNER JOIN
+ tblOrder O ON M.MembershipID = O.MembershipID
+INNER JOIN
+   tblProductOrder P ON O.OrderID = P.OrderID
+WHERE
+ MT.MembershipTypeName = 'Business'
+GROUP BY
+ C.CustomerFName,
+ C.CustomerLName,
+ C.CustomerEmail;
+GO
+
+
+SELECT *
+FROM vwBusinessMembershipOrderTotals;
+GO
+
+
+
+
+-- Views 6: Write a query to calculate the total revenue generated from sales of products by state.
+CREATE OR ALTER VIEW vwSalesRevenueByState
+AS
+SELECT
+ ST.StateName,
+ SUM(PO.Subtotal) AS TotalRevenue
+FROM
+ tblProductOrder PO
+INNER JOIN
+ tblOrder O ON PO.OrderID = O.OrderID
+INNER JOIN
+ tblWarehouse W ON O.WarehouseID = W.WarehouseID
+INNER JOIN
+ tblState ST ON W.StateID = ST.StateID
+GROUP BY
+ ST.StateName;
+GO
+
+
+SELECT *
+FROM vwSalesRevenueByState;
+GO
+
+
+
+
