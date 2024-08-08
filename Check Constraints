@@ -1,0 +1,222 @@
+Business Rule 1: Membership Validity
+A customer's order cannot be processed unless they have a valid membership that has not expired. The expiration date must be equal to or later than the order date.
+
+USE team7_Project4;
+GO
+-- Check if the function exists and drop it if it does
+IF OBJECT_ID('dbo.fnCheckMembershipValidity', 'FN') IS NOT NULL
+    DROP FUNCTION dbo.fnCheckMembershipValidity;
+GO
+-- Create the function afresh
+CREATE FUNCTION fnCheckMembershipValidity()
+RETURNS INT
+AS
+BEGIN
+    DECLARE @Result INT = 1; -- Assume membership is valid
+    -- If a membership is expired, set result to invalid (0)
+    IF EXISTS (
+        SELECT 1
+        FROM tblMembership AS M
+        JOIN tblOrder AS O ON M.MembershipID = O.MembershipID
+        WHERE M.ExpirationDate < O.OrderDate
+    )
+    BEGIN
+        SET @Result = 0;
+    END
+
+
+    RETURN @Result;
+END;
+GO
+-- Check if the constraint exists and drop it if it does
+IF EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_TYPE = 'CHECK'
+    AND CONSTRAINT_NAME = 'CHK_MembershipValidity'
+)
+BEGIN
+    ALTER TABLE tblOrder
+    DROP CONSTRAINT CHK_MembershipValidity;
+END
+GO
+-- Add the new check constraint
+ALTER TABLE tblOrder
+ADD CONSTRAINT CHK_MembershipValidity
+CHECK (dbo.fnCheckMembershipValidity() = 1);
+
+Business Rule 2: Age Verification for Campaign Participation
+"For any campaign within our database with a goal of 'Alcohol Promotion', only customers who are at least 21 years old at the time of the campaign start date are eligible to participate."  
+
+
+
+-- Function to check customer age eligibility for alcohol promotion campaigns
+CREATE FUNCTION fnCheckAgeEligibilityForAlcoholPromo()
+RETURNS INT
+AS
+BEGIN
+    DECLARE @Result INT = 1; -- Assume all customers are eligible by default
+
+
+    -- Check for customers who are not old enough to participate in alcohol promotion campaigns
+    IF EXISTS (
+        SELECT 1
+        FROM tblCustomer AS C
+        JOIN tblCustomerCampaign AS CC ON C.CustomerID = CC.CustomerID
+        JOIN tblCampaign AS Camp ON CC.CampaignID = Camp.CampaignID
+        JOIN tblCampaignType AS CT ON Camp.CampaignTypeID = CT.CampaignTypeID
+        WHERE CT.CampaignTypeName = 'Alcohol Promotion'
+        AND DATEDIFF(YEAR, C.DOB, Camp.CampaignStartDate) < 21
+    )
+    BEGIN
+        SET @Result = 0; -- Not eligible
+    END
+
+
+    RETURN @Result;
+END;
+GO
+
+
+-- Constraint to enforce the business rule on the CustomerCampaign table
+ALTER TABLE tblCustomerCampaign
+ADD CONSTRAINT CHK_AgeEligibilityForAlcoholPromo
+CHECK (dbo.fnCheckAgeEligibilityForAlcoholPromo() = 1);
+GO
+
+
+
+Business Rule 3: Supplier Contact Role and Email
+The role in the supplier’s contact information cannot be janitor, and the email cannot end in ‘@scam.com’
+
+CREATE FUNCTION fnCheckSupplierContactRoleAndEmail ()
+RETURNS INT
+AS
+BEGIN
+
+
+DECLARE @RET INT = 0
+IF EXISTS (
+       SELECT *
+       FROM tblSupplierContact SC
+       JOIN tblContact C ON SC.ContactID = C.ContactID
+       JOIN tblRole R ON C.RoleID = R.RoleID
+       WHERE R.RoleName = 'Janitor'
+       AND C.ContactEmail LIKE '%@scam.com'
+   )
+   BEGIN
+       SET @RET = 1
+   END
+   RETURN @RET
+END;
+GO
+
+
+ALTER TABLE tblSupplierContact WITH NOCHECK
+ADD CONSTRAINT CK_SupplierContactRoleAndEmail
+CHECK (dbo.fnCheckSupplierContactRoleAndEmail() = 0);
+GO
+
+
+
+
+
+
+
+
+
+
+Business Rule 4: International supplier profit rate
+For any international suppliers, their product profit rate must be larger than 5%
+CREATE FUNCTION fnCheckInternationalSupplierProfitRate ()
+RETURNS INT
+AS
+BEGIN
+
+
+DECLARE @RET INT = 0
+IF EXISTS (
+       SELECT *
+       FROM tblProduct P
+       JOIN tblSupplier S ON P.SupplierID = S.SupplierID
+       JOIN tblSupplierType ST ON S.SupplierTypeID = ST.SupplierTypeID
+       WHERE ST.SupplierTypeName = 'International'
+       AND ((P.Price - P.Cost) / P.Cost) < 0.05
+   )
+   BEGIN
+       SET @RET = 1
+   END
+   RETURN @RET
+END;
+GO
+
+
+ALTER TABLE tblProduct WITH NOCHECK
+ADD CONSTRAINT CK_InternationalSupplierProfitRate
+CHECK (dbo.fnCheckInternationalSupplierProfitRate() = 0);
+GO
+
+Business Rule 5: Check staff's active status
+All staff records in the database must represent active staff members. Specifically, it would not allow any modification of staff records where the StaffEndDate indicated that the staff member's employment had already concluded
+
+CREATE FUNCTION fnCheckStaffActive()
+RETURNS INT
+AS
+BEGIN
+   DECLARE @Result INT = 1; -- Assume all staff are active by default
+
+
+   -- Check for staff members who have an end date in the past
+   IF EXISTS (
+       SELECT 1
+       FROM tblStaff AS S
+       WHERE S.StaffEndDate IS NOT NULL AND S.StaffEndDate < GETDATE()
+   )
+   BEGIN
+       SET @Result = 0; -- Staff is not active
+   END
+
+
+   RETURN @Result;
+END;
+GO
+
+
+ALTER TABLE tblStaff
+ADD CONSTRAINT CHK_StaffActive
+CHECK (dbo.fnCheckStaffActive() = 1);
+GO
+
+
+
+Business Rule 6: Exclude holidays on operating date
+Costco warehouses would not open for holidays like Christmas and New Year’s Day.
+
+CREATE FUNCTION fnExcludeHolidays (@ScheduleDate DATE)
+RETURNS INT
+AS
+BEGIN
+   DECLARE @Result INT = 1;
+
+
+   -- Check if the date is Christmas (December 25) or New Year's Day (January 1)
+   IF (
+       (MONTH(@ScheduleDate) = 12 AND DAY(@ScheduleDate) = 25) OR
+       (MONTH(@ScheduleDate) = 1 AND DAY(@ScheduleDate) = 1)
+   )
+   BEGIN
+       SET @Result = 0;
+   END
+
+
+   RETURN @Result;
+END;
+GO
+
+
+ALTER TABLE tblSchedule
+ADD CONSTRAINT CHK_Schedule_ExcludeHolidays
+CHECK (dbo.fnExcludeHolidays(ScheduleDate) = 1);
+GO
+
+
